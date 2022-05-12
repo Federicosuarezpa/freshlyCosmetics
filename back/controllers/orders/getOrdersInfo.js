@@ -14,6 +14,7 @@ const ordersInfo = async (req, res, next) => {
             and o.id_order = od.id_order_detail 
             and o.current_state = osl.id_order_state
             and cl.id_country = ad.id_country
+            order by o.id_order desc
             `
         );
         res.send({

@@ -2,6 +2,8 @@ import {useEffect, useState} from 'react';
 import {getCountriesInfo, getOrdersInfo} from '../../api/apiService';
 import {Container, Dropdown, Form, Table} from "react-bootstrap";
 import '../../styles/commonStyles.css';
+import { useCookies } from 'react-cookie';
+
 
 function filterByCountry(data, temporalCities) {
     return data.reduce(function (filtered, option) {
@@ -30,12 +32,22 @@ function formatData(reduced, setProducts) {
 }
 
 function filterByName(data, nameToFilter) {
-    console.log(data);
     let name;
     return data.reduce(function (filtered, option) {
-        name = option.firstname + option.lastname
+        name = `${option.firstname} ${option.lastname}`
         if (
-            (name.toLowerCase().includes(nameToFilter, 0) === true)) {
+            (name.toLowerCase().includes(nameToFilter.toLowerCase(), 0) === true)) {
+            filtered.push(option);
+        }
+        return filtered;
+    }, []);
+}
+
+function filterByStatus(reduced, temporalStatus) {
+    return reduced.reduce(function (filtered, option) {
+        if (
+            (temporalStatus.indexOf(option.current_state.toString()) !== -1 || temporalStatus.indexOf("0") !== -1)
+        ) {
             filtered.push(option);
         }
         return filtered;
@@ -49,7 +61,9 @@ export default function GetOrdersInfo(props) {
     const [countries, setCountry] = useState("Todos");
     const [allChecked, setAllChecked] = useState(1);
     const [nameFilter, setNameFilter] = useState("");
-    const [statusFilter, setStatusFilter] = useState([2, 3]);
+    const [statusFilter, setStatusFilter] = useState(["2", "3"]);
+    const [cookies, setCookie] = useCookies(['user']);
+
     const [seconds, setSeconds] = useState(0);
     const orderStatus = {
         'Pago pendiente': '1',
@@ -85,7 +99,7 @@ export default function GetOrdersInfo(props) {
         const city = event.target.name;
         const index = countriesFilter.indexOf(city);
         const indexAll = countriesFilter.indexOf("Todos");
-        let temporalCities;
+        let temporalCountries;
         if (index === -1) {
             if (city === "Todos") {
                 setAllChecked(1);
@@ -93,27 +107,28 @@ export default function GetOrdersInfo(props) {
                 countriesFilter.splice(index, 1);
                 setAllChecked(0);
             }
-            temporalCities = [...countriesFilter, city]
+            temporalCountries = [...countriesFilter, city]
             setCountriesFilter(countriesFilter => [...countriesFilter, city]);
         } else {
             countriesFilter.splice(index, 1);
             setCountriesFilter(countriesFilter);
-            temporalCities = countriesFilter;
+            temporalCountries = countriesFilter;
             if (city === "Todos") {
                 setAllChecked(0);
             }
         }
         let reduced = filterByName(data, nameFilter);
-        reduced = filterByCountry(reduced, temporalCities);
+        reduced = filterByStatus(reduced, statusFilter);
+        reduced = filterByCountry(reduced, temporalCountries);
         formatData(reduced, setProducts);
     };
     const onChangeStatus = (event) => {
         const newStatus = event.target.id;
         const index = statusFilter.indexOf(newStatus);
-        const indexAll = countriesFilter.indexOf(0);
+        const indexAll = statusFilter.indexOf("0");
         let temporalStatus;
         if (index === -1) {
-            if (newStatus === 0) {
+            if (newStatus === "0") {
                 setAllChecked(1);
             } else if (indexAll > -1) {
                 statusFilter.splice(index, 1);
@@ -125,22 +140,31 @@ export default function GetOrdersInfo(props) {
             statusFilter.splice(index, 1);
             setStatusFilter(statusFilter);
             temporalStatus = statusFilter;
-            if (newStatus === 0) {
+            if (newStatus === "0") {
                 setAllChecked(0);
             }
         }
+        let reduced = filterByName(data, nameFilter);
+        reduced = filterByCountry(reduced, countriesFilter);
+        reduced = filterByStatus(reduced, temporalStatus);
+
+        formatData(reduced, setProducts);
     }
+
     const onChangeSearcher = (event) => {
         let reduced = filterByCountry(data, countriesFilter);
+        reduced = filterByStatus(reduced, statusFilter);
         reduced = filterByName(reduced, event.target.value);
         formatData(reduced, setProducts);
         setNameFilter(event.target.value);
     }
-    async function updateData() {
+
+    async function updateDataFetch() {
         let dataInfo = await getOrdersInfo();
         dataInfo = dataInfo.message;
-        console.log("asdkop");
+        return Object.keys(dataInfo).length;
     }
+
     function useFetch() {
         async function getData() {
             let countriesInfo = await getCountriesInfo();
@@ -160,6 +184,7 @@ export default function GetOrdersInfo(props) {
 
             const listCategory = dataInfo.map((item => {
                 if (item.current_state === 2 || item.current_state === 3) {
+                    let date = item.date_add.replaceAll("Z", " ").replaceAll("T", " ").replaceAll(".000", "");
                     return (
                         <tr key={item.id_order}>
                             <td>{item.id_order}</td>
@@ -168,7 +193,7 @@ export default function GetOrdersInfo(props) {
                             <td>{item.country}</td>
                             <td>{item.product_name}</td>
                             <td>{item.current_state_name}</td>
-                            <td>{item.date_add}</td>
+                            <td>{date}</td>
                         </tr>
                     )
                 }
@@ -182,6 +207,14 @@ export default function GetOrdersInfo(props) {
             getData();
         }, [])
         useEffect(() => {
+            async function updateData() {
+                const orders = await updateDataFetch();
+                if(orders !== parseInt(cookies.orders)){
+                    getData();
+                    setCookie("orders", orders);
+                }
+
+            }
             const interval = setInterval(() => {
                 updateData()
             }, 1000);
@@ -207,7 +240,7 @@ export default function GetOrdersInfo(props) {
                                         label="Todos los estados"
                                         name="Todos"
                                         type="checkbox"
-                                        id={0}
+                                        id="0"
                                     />
                                     {status()}
                                 </div>
