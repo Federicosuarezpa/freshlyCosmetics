@@ -1,0 +1,51 @@
+const apiUrl = 'http://localhost:8000';
+
+const requestMethods = { get: 'GET', put: 'PUT'};
+
+const endPoints = {
+    getOrdersInfo: '/getOrdersInfo',
+    modifyOrderState: '/modifyOrderState',
+    getCountriesInfo: '/getCountries'
+};
+
+async function fetchFormData(path, { body, method }) {
+    let token = localStorage.getItem('token');
+    if (!token) token = sessionStorage.getItem('token');
+    const headers = new Headers();
+    headers.append('Authorization', token);
+
+    return await fetch(`${apiUrl}${path}`, { method, headers, body });
+}
+
+async function fetchApi(path, { body, method }) {
+    const headers = new Headers({ 'Content-Type': 'application/json' });
+    const request = await fetch(`${apiUrl}${path}`, { headers: headers, method: method, body: JSON.stringify(body) });
+    const requestData = await request.json();
+
+    if (requestData.status === 'error') {
+        throw requestData.message;
+    }
+
+    return requestData;
+}
+
+export async function getOrdersInfo() {
+    return await fetchApi(endPoints.getOrdersInfo, {
+        method: requestMethods.get,
+    });
+}
+
+export async function getCountriesInfo() {
+    return await fetchApi(endPoints.getCountriesInfo, {
+        method: requestMethods.get,
+    });
+}
+
+export async function modifyOrderState(data, id) {
+    const body = new FormData();
+    body.append('name', data.newStatus);
+    return await fetchFormData(endPoints.modifyOrderState + id, {
+        method: requestMethods.put,
+        body,
+    });
+}

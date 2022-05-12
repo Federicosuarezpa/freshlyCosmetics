@@ -1,18 +1,26 @@
 require("dotenv").config();
+const cors=require("cors");
 const express = require("express");
 
 const { PORT }  = process.env;
-
 const app = express();
+const corsOptions ={
+    origin:'*',
+    credentials:true,            //access-control-allow-credentials:true
+    optionSuccessStatus:200,
+}
 
 const {
     getOrdersInfo,
-    modifyOrderState
+    modifyOrderState,
+    getCountries
 } = require("./controllers/orders");
 
-app.get("/getOrdersInfo", getOrdersInfo);
+app.use(cors(corsOptions))
 
+app.get("/getOrdersInfo", getOrdersInfo);
 app.get("/modifyOrderState/:id_order", modifyOrderState);
+app.get("/getCountries", getCountries);
 
 app.use((error, req, res, next) => {
     console.error(error);
