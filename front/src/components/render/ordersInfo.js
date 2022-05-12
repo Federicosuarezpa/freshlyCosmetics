@@ -1,7 +1,10 @@
 import {useEffect, useState} from 'react';
-import {getCountriesInfo, getNumberOrders, getOrderInfo, getOrdersInfo} from '../../api/apiService';
-import {Button, Container, Dropdown, Form, Modal, Table} from "react-bootstrap";
+import {getCountriesInfo, getNumberOrders, getOrderInfo, getOrdersInfo, modifyOrderState} from '../../api/apiService';
+import {Button, Card, Container, Dropdown, Form, Modal} from "react-bootstrap";
+import BootstrapTable from 'react-bootstrap-table-next';
 import '../../styles/commonStyles.css';
+import 'react-bootstrap-table2-paginator/dist/react-bootstrap-table2-paginator.min.css';
+import paginationFactory from 'react-bootstrap-table2-paginator';
 import {useCookies} from 'react-cookie';
 
 
@@ -17,18 +20,7 @@ function filterByCountry(data, temporalCities) {
 }
 
 function formatData(reduced, setProducts) {
-    const listFiltered = reduced.map((item) => (
-        <tr key={item.id_order}>
-            <td>{item.id_order}</td>
-            <td>{item.firstname} {item.lastname}</td>
-            <td>{item.address1} {item.address2}</td>
-            <td>{item.country}</td>
-            <td>{item.product_name}</td>
-            <td>{item.current_state_name}</td>
-            <td>{formatDate(item.date_add)}</td>
-        </tr>
-    ));
-    setProducts(listFiltered);
+    setProducts(reduced);
 }
 
 function filterByName(data, nameToFilter) {
@@ -71,14 +63,111 @@ export default function GetOrdersInfo(props) {
     const [statusFilter, setStatusFilter] = useState(["2", "3"]);
     const [cookies, setCookie] = useCookies(['user']);
     const [show, setShow] = useState(false);
+    const [actualState, setActualState] = useState("");
+    const [actualOrder, setActualOrder] = useState("");
+    const [newStatus, setNewStatus] = useState("");
     const [orderInfo, setOrderInfo] = useState();
+    const columns = [
+        { dataField: 'id_order', text: 'Id' },
+        {
+            dataField: "firstName",
+            text: "Cliente",
+            formatter: (cell, row) => {
+                return <div>{row['firstname'] + " " + row['lastname']}</div>;
+            }
+        },
+        {
+            dataField: "address1",
+            text: "Dirección",
+            formatter: (cell, row) => {
+                return <div>{row['address1'] + " " + row['address2']}</div>;
+            }
+        },
+        { dataField: 'country', text: 'País'},
+        { dataField: 'product_name', text: 'Productos'},
+        { dataField: 'current_state_name', text: 'Estado'},
+        {
+            dataField: "date_add",
+            text: "Fecha pedido",
+            formatter: (cell, row) => {
+                return <div>{formatDate(row['date_add'])}</div>;
+            }
+        },
+    ];
+    const pagination = paginationFactory({
+        page: 1,
+        sizePerPage: 50,
+        lastPageText: '>>',
+        firstPageText: '<<',
+        nextPageText: '>',
+        prePageText: '<',
+        showTotal: true,
+        alwaysShowAllBtns: true,
+    });
+    const rowEvents = {
+        onClick: (e, row, rowIndex) => {
+            handleShow(row.id_order);
+        }
+    };
+
+    const saveChanges = async () => {
+        if (newStatus === "" || newStatus === actualState) {
+            handleClose();
+        } else {
+            const response = await modifyOrderState(newStatus, actualOrder);
+        }
+    }
+
+    const setNewStatusAction = (event) => {
+        setNewStatus(event.target.value);
+    }
 
     const handleClose = () => setShow(false);
     const handleShow = async (value) => {
         let orderInfo = await getOrderInfo(value);
         orderInfo = orderInfo.message;
         if (orderInfo.length > 0) {
-            setOrderInfo(orderInfo[0].id_order);
+            orderInfo = orderInfo[0];
+            setActualOrder(orderInfo.id_order);
+            setActualState(orderInfo.current_state);
+            orderInfo =
+                <div>
+                    <Card>
+                        <Card.Header as="h5">Pedido: {orderInfo.id_order}</Card.Header>
+                        <Card.Body>
+                            <Card.Title>Cliente</Card.Title>
+                            <Card.Text>
+                                {orderInfo.firstname} {orderInfo.lastname}
+                            </Card.Text>
+                            <Card.Title>Dirección</Card.Title>
+                            <Card.Text>
+                                {orderInfo.address1} {orderInfo.address2}
+                            </Card.Text>
+                            <Card.Title>País</Card.Title>
+                            <Card.Text>
+                                {orderInfo.country}
+                            </Card.Text>
+                            <Card.Title>Productos</Card.Title>
+                            <Card.Text>
+                                {orderInfo.product_name}
+                            </Card.Text>
+                            <Card.Title>Estado del pedido</Card.Title>
+                            <Card.Text>
+                                <div onChange={(e) => setNewStatusAction(e)}>
+                                    <Form.Select aria-label="Default select example">
+                                        <option value={orderInfo.current_state_name}>{orderInfo.current_state_name}</option>
+                                        {setStatusOptions(orderInfo.current_state)}
+                                    </Form.Select>
+                                </div>
+                            </Card.Text>
+                            <Card.Title>Fecha del pedido</Card.Title>
+                            <Card.Text>
+                                {formatDate(orderInfo.date_add)}
+                            </Card.Text>
+                        </Card.Body>
+                    </Card>
+                </div>
+            setOrderInfo(orderInfo);
             setShow(true);
         }
     }
@@ -93,6 +182,18 @@ export default function GetOrdersInfo(props) {
         'Reembolso': '7',
         'Error en el pago': '8'
     };
+
+    const setStatusOptions = (actualStatus) => {
+        const statusList = Object.entries(orderStatus).map((item => {
+            if (item[1] !== actualStatus.toString()) {
+                return (
+                    <option value={item[1]}>{item[0]}</option>
+                )
+            }
+        }));
+        return <>{statusList}</>
+
+    }
 
     const status = () => {
         let defaultChecked = 0;
@@ -200,21 +301,14 @@ export default function GetOrdersInfo(props) {
                 />
             ));
 
-            const listCategory = dataInfo.map((item => {
+            const listCategory = dataInfo.filter((item => {
                 if (item.current_state === 2 || item.current_state === 3) {
                     return (
-                        <tr key={item.id_order}>
-                            <td onClick={() => handleShow(item.id_order)} className="btn-link text-primary" >{item.id_order}</td>
-                            <td>{item.firstname} {item.lastname}</td>
-                            <td>{item.address1} {item.address2}</td>
-                            <td>{item.country}</td>
-                            <td>{item.product_name}</td>
-                            <td>{item.current_state_name}</td>
-                            <td>{formatDate(item.date_add)}</td>
-                        </tr>
+                        item
                     )
                 }
             }));
+
             setData(dataInfo);
             setProducts(listCategory);
             setCountry(countriesList);
@@ -223,6 +317,7 @@ export default function GetOrdersInfo(props) {
         useEffect(() => {
             getData();
         }, [])
+
         useEffect(() => {
             async function updateData() {
                 const orders = await updateDataFetch();
@@ -234,7 +329,7 @@ export default function GetOrdersInfo(props) {
             }
             const interval = setInterval(() => {
                 updateData()
-            }, 1000);
+            }, 100000);
 
             return () => clearInterval(interval);
         }, []);
@@ -291,25 +386,7 @@ export default function GetOrdersInfo(props) {
                         onChange={(e) => onChangeSearcher(e)}
                     />
                 </div>
-
-                <div className="d-flex align-items-center justify-content-center">
-                    <Table striped bordered size>
-                        <thead>
-                        <tr>
-                            <th>Id</th>
-                            <th>Cliente</th>
-                            <th>Dirección</th>
-                            <th width="7%">País</th>
-                            <th>Productos</th>
-                            <th>Estado</th>
-                            <th width="10%">Fecha pedido</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {products}
-                        </tbody>
-                    </Table>
-                </div>
+                <BootstrapTable keyField='id' data={products} columns={columns} rowEvents={rowEvents} pagination={pagination} />
             </>
         );
     }
@@ -323,7 +400,10 @@ export default function GetOrdersInfo(props) {
                 <Modal.Body>{orderInfo}</Modal.Body>
                 <Modal.Footer>
                     <Button variant="secondary" onClick={handleClose}>
-                        Close
+                        Cerrar
+                    </Button>
+                    <Button variant="primary" onClick={saveChanges}>
+                        Guardar cambios
                     </Button>
                 </Modal.Footer>
             </Modal>

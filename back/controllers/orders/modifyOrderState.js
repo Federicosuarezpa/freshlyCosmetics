@@ -5,8 +5,9 @@ const modifyOrderState = async (req, res, next) => {
 
     try {
         connection = await getDB();
-        const { id } = req.params;
-        const { newState } = req.body;
+        console.log(req.body);
+        const { id_order } = req.params;
+        const newState = req.query.newState;
 
         await connection.query(
             `
@@ -14,7 +15,7 @@ const modifyOrderState = async (req, res, next) => {
             set current_state=?
             where id_order=?
             `,
-            [newState, id]
+            [newState, id_order]
         );
         res.send({
             status: "ok",

@@ -1,6 +1,8 @@
 require("dotenv").config();
 const cors=require("cors");
 const express = require("express");
+const bodyParser = require("body-parser");
+const morgan = require("morgan");
 
 const { PORT }  = process.env;
 const app = express();
@@ -18,6 +20,8 @@ const {
     getOrderInfo
 } = require("./controllers/orders");
 
+app.use(morgan("dev"));
+app.use(bodyParser.json());
 app.use(cors(corsOptions))
 
 app.get("/getOrdersInfo", getOrdersInfo);
