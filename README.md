@@ -1,1 +1,1 @@
-# freshlyCosmetics
+# Freshly Cosmetics project
