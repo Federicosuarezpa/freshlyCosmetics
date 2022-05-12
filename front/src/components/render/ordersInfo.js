@@ -1,8 +1,8 @@
 import {useEffect, useState} from 'react';
-import {getCountriesInfo, getOrdersInfo} from '../../api/apiService';
-import {Container, Dropdown, Form, Table} from "react-bootstrap";
+import {getCountriesInfo, getNumberOrders, getOrderInfo, getOrdersInfo} from '../../api/apiService';
+import {Button, Container, Dropdown, Form, Modal, Table} from "react-bootstrap";
 import '../../styles/commonStyles.css';
-import { useCookies } from 'react-cookie';
+import {useCookies} from 'react-cookie';
 
 
 function filterByCountry(data, temporalCities) {
@@ -25,7 +25,7 @@ function formatData(reduced, setProducts) {
             <td>{item.country}</td>
             <td>{item.product_name}</td>
             <td>{item.current_state_name}</td>
-            <td>{item.date_add}</td>
+            <td>{formatDate(item.date_add)}</td>
         </tr>
     ));
     setProducts(listFiltered);
@@ -54,17 +54,35 @@ function filterByStatus(reduced, temporalStatus) {
     }, []);
 }
 
+function formatDate(item) {
+    return item.replaceAll("Z", " ")
+        .replaceAll("T", " ")
+        .replaceAll(".000", "");
+}
+
 export default function GetOrdersInfo(props) {
     const [data, setData] = useState([]);
     const [products, setProducts] = useState([]);
     const [countriesFilter, setCountriesFilter] = useState(["Todos"]);
     const [countries, setCountry] = useState("Todos");
     const [allChecked, setAllChecked] = useState(1);
+    const [allStatusChecked, setAllStatusChecked] = useState(0);
     const [nameFilter, setNameFilter] = useState("");
     const [statusFilter, setStatusFilter] = useState(["2", "3"]);
     const [cookies, setCookie] = useCookies(['user']);
+    const [show, setShow] = useState(false);
+    const [orderInfo, setOrderInfo] = useState();
 
-    const [seconds, setSeconds] = useState(0);
+    const handleClose = () => setShow(false);
+    const handleShow = async (value) => {
+        let orderInfo = await getOrderInfo(value);
+        orderInfo = orderInfo.message;
+        if (orderInfo.length > 0) {
+            setOrderInfo(orderInfo[0].id_order);
+            setShow(true);
+        }
+    }
+
     const orderStatus = {
         'Pago pendiente': '1',
         'Pago aceptado': '2',
@@ -129,10 +147,10 @@ export default function GetOrdersInfo(props) {
         let temporalStatus;
         if (index === -1) {
             if (newStatus === "0") {
-                setAllChecked(1);
+                setAllStatusChecked(1);
             } else if (indexAll > -1) {
                 statusFilter.splice(index, 1);
-                setAllChecked(0);
+                setAllStatusChecked(0);
             }
             temporalStatus = [...statusFilter, newStatus]
             setStatusFilter(statusFilter => [...statusFilter, newStatus]);
@@ -141,7 +159,7 @@ export default function GetOrdersInfo(props) {
             setStatusFilter(statusFilter);
             temporalStatus = statusFilter;
             if (newStatus === "0") {
-                setAllChecked(0);
+                setAllStatusChecked(0);
             }
         }
         let reduced = filterByName(data, nameFilter);
@@ -160,9 +178,9 @@ export default function GetOrdersInfo(props) {
     }
 
     async function updateDataFetch() {
-        let dataInfo = await getOrdersInfo();
+        let dataInfo = await getNumberOrders();
         dataInfo = dataInfo.message;
-        return Object.keys(dataInfo).length;
+        return dataInfo[0].numberOrders;
     }
 
     function useFetch() {
@@ -184,16 +202,15 @@ export default function GetOrdersInfo(props) {
 
             const listCategory = dataInfo.map((item => {
                 if (item.current_state === 2 || item.current_state === 3) {
-                    let date = item.date_add.replaceAll("Z", " ").replaceAll("T", " ").replaceAll(".000", "");
                     return (
                         <tr key={item.id_order}>
-                            <td>{item.id_order}</td>
+                            <td onClick={() => handleShow(item.id_order)} className="btn-link text-primary" >{item.id_order}</td>
                             <td>{item.firstname} {item.lastname}</td>
                             <td>{item.address1} {item.address2}</td>
                             <td>{item.country}</td>
                             <td>{item.product_name}</td>
                             <td>{item.current_state_name}</td>
-                            <td>{date}</td>
+                            <td>{formatDate(item.date_add)}</td>
                         </tr>
                     )
                 }
@@ -241,6 +258,7 @@ export default function GetOrdersInfo(props) {
                                         name="Todos"
                                         type="checkbox"
                                         id="0"
+                                        checked={allStatusChecked}
                                     />
                                     {status()}
                                 </div>
@@ -255,7 +273,7 @@ export default function GetOrdersInfo(props) {
                                         label="Todos los paises"
                                         name="Todos"
                                         type="checkbox"
-                                        id={`Todos`}
+                                        id="Todos"
                                         checked={allChecked}
                                     />
                                     {countries}
@@ -298,6 +316,17 @@ export default function GetOrdersInfo(props) {
 
     return (
         <div>
+            <Modal show={show} onHide={handleClose}>
+                <Modal.Header closeButton>
+                    <Modal.Title>Información del producto</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>{orderInfo}</Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={handleClose}>
+                        Close
+                    </Button>
+                </Modal.Footer>
+            </Modal>
             {useFetch()}
         </div>
     )

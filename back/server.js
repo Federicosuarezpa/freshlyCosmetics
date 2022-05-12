@@ -13,14 +13,18 @@ const corsOptions ={
 const {
     getOrdersInfo,
     modifyOrderState,
-    getCountries
+    getCountries,
+    getNumberOrders,
+    getOrderInfo
 } = require("./controllers/orders");
 
 app.use(cors(corsOptions))
 
 app.get("/getOrdersInfo", getOrdersInfo);
-app.get("/modifyOrderState/:id_order", modifyOrderState);
+app.put("/modifyOrderState/:id_order", modifyOrderState);
 app.get("/getCountries", getCountries);
+app.get("/getNumberOrders", getNumberOrders);
+app.get("/getOrderInfo/:id_order", getOrderInfo);
 
 app.use((error, req, res, next) => {
     console.error(error);

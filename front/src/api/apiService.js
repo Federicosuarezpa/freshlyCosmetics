@@ -5,7 +5,9 @@ const requestMethods = { get: 'GET', put: 'PUT'};
 const endPoints = {
     getOrdersInfo: '/getOrdersInfo',
     modifyOrderState: '/modifyOrderState',
-    getCountriesInfo: '/getCountries'
+    getCountriesInfo: '/getCountries',
+    getNumberOrders: '/getNumberOrders',
+    getOrderInfo: '/getOrderInfo'
 };
 
 async function fetchFormData(path, { body, method }) {
@@ -41,11 +43,23 @@ export async function getCountriesInfo() {
     });
 }
 
+export async function getNumberOrders() {
+    return await fetchApi(endPoints.getNumberOrders, {
+        method: requestMethods.get,
+    })
+}
+
 export async function modifyOrderState(data, id) {
     const body = new FormData();
     body.append('name', data.newStatus);
     return await fetchFormData(endPoints.modifyOrderState + id, {
         method: requestMethods.put,
         body,
+    });
+}
+
+export async function getOrderInfo(id) {
+    return await fetchApi(endPoints.getOrderInfo + "/" + id, {
+        method: requestMethods.get,
     });
 }
