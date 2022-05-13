@@ -9,10 +9,10 @@ export default function Header() {
                     <Navbar.Brand href="#home">Freshly Cosmetics</Navbar.Brand>
                     <Navbar.Collapse id="responsive-navbar-nav">
                         <Nav className="me-auto">
-                            <Nav.Link href="#features">Home</Nav.Link>
+                            <Nav.Link href="#">Home</Nav.Link>
                         </Nav>
                         <Nav>
-                            <Nav.Link href="#deets">Federico Suárez</Nav.Link>
+                            <Nav.Link href="#">Federico Suárez</Nav.Link>
                         </Nav>
                     </Navbar.Collapse>
                 </Container>
