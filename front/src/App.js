@@ -1,7 +1,7 @@
 import './App.css';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import Header from './components/common/header';
-import GetOrdersInfo from "./components/render/ordersInfo";
+import Header from './components/common/Header';
+import OrdersInfoPage from "./pages/OrdersInfoPage";
 import 'bootstrap/dist/css/bootstrap.min.css'
 
 function App() {
@@ -9,7 +9,7 @@ function App() {
       <Router>
           <Header></Header>
           <Routes>
-              <Route exact path="/" element={<GetOrdersInfo></GetOrdersInfo>}></Route>
+              <Route exact path="/" element={<OrdersInfoPage></OrdersInfoPage>}></Route>
           </Routes>
       </Router>
   );

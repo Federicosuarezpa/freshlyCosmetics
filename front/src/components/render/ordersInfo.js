@@ -67,6 +67,7 @@ export default function GetOrdersInfo(props) {
     const [actualOrder, setActualOrder] = useState("");
     const [newStatus, setNewStatus] = useState("");
     const [orderInfo, setOrderInfo] = useState();
+    const [errorMessage, setErrorMessage] = useState('');
     const columns = [
         { dataField: 'id_order', text: 'Id' },
         {
@@ -114,7 +115,22 @@ export default function GetOrdersInfo(props) {
         if (newStatus === "" || newStatus === actualState) {
             handleClose();
         } else {
-            const response = await modifyOrderState(newStatus, actualOrder);
+            try {
+                const serverResponse = await modifyOrderState(newStatus, actualOrder);
+                if (errorMessage.length > 0) {
+                    setErrorMessage('');
+                }
+                if (serverResponse.status === 200) {
+                    setErrorMessage('');
+                    window.location.reload();
+                }
+                if (serverResponse.status !== 200) {
+                    setErrorMessage('Ha habido un error, es posible que falten campos');
+                }
+            } catch (error) {
+                setErrorMessage('');
+                setErrorMessage('error');
+            }
         }
     }
 
@@ -329,7 +345,7 @@ export default function GetOrdersInfo(props) {
             }
             const interval = setInterval(() => {
                 updateData()
-            }, 100000);
+            }, 1000);
 
             return () => clearInterval(interval);
         }, []);
@@ -358,7 +374,7 @@ export default function GetOrdersInfo(props) {
                                     {status()}
                                 </div>
                                 <div className="d-flex justify-content-center">
-                                    <b>Paises</b>
+                                    <b>Países</b>
                                 </div>
                                 <div className="d-flex-inline justify-content-center mb-3"
                                      key={`inline-checkbox-countries`}
@@ -405,6 +421,7 @@ export default function GetOrdersInfo(props) {
                     <Button variant="primary" onClick={saveChanges}>
                         Guardar cambios
                     </Button>
+                    {errorMessage.length > 0 && <p className="error">{errorMessage}</p>}
                 </Modal.Footer>
             </Modal>
             {useFetch()}
